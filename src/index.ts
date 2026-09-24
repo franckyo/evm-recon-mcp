@@ -3,6 +3,9 @@
  * evm-recon-mcp — EVM contract reconnaissance over MCP.
  * Read-only. No private keys, no signing, no transactions.
  */
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
@@ -11,7 +14,13 @@ import { hexToBytes, disassemble, formatDisassembly } from "./evm/disasm.js";
 import { mappingSlot, nestedMappingSlot, arrayElementSlot, keccakWords, keccakUtf8, keccakRawHex } from "./evm/slots.js";
 import { decodeCalldata, selectorOf } from "./evm/selectors.js";
 
-const server = new McpServer({ name: "evm-recon-mcp", version: "0.1.0" });
+// Read the version from package.json rather than hardcoding it, so the version reported
+// over MCP can never drift from the published package version.
+const pkg = JSON.parse(
+  readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "package.json"), "utf8")
+) as { version: string };
+
+const server = new McpServer({ name: "evm-recon-mcp", version: pkg.version });
 const text = (s: string) => ({ content: [{ type: "text" as const, text: s }] });
 const fail = (e: unknown) => ({ content: [{ type: "text" as const, text: `Error: ${e instanceof Error ? e.message : String(e)}` }], isError: true });
 

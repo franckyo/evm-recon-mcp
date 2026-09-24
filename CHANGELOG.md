@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.2 — 2026-09-23
+
+### Fixed
+- **The server reported version `0.1.0` over MCP while publishing as `0.1.1`.** The version
+  passed to `McpServer` was a hardcoded string that was not bumped with the package. It is now
+  read from `package.json` at startup, so the two cannot drift again. Caught by end-to-end
+  verification of the published 0.1.1 artifact, not by any test — a test now covers it.
+
 ## 0.1.1 — 2026-09-23
 
 Post-release review found seven issues; all are fixed here. Two produced confidently wrong

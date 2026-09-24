@@ -96,3 +96,29 @@ test("malformed hex is rejected by the disassembler", () => {
   assert.throws(() => hexToBytes("0xZZ"), /non-hex/);
   assert.throws(() => hexToBytes("0xabc"), /odd length/);
 });
+
+// --- regression: v0.1.1 shipped reporting version "0.1.0" over MCP ---
+test("server reports the same version as package.json", async () => {
+  const { spawn } = await import("node:child_process");
+  const { readFileSync } = await import("node:fs");
+  const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+  const reported = await new Promise((resolve, reject) => {
+    const p = spawn(process.execPath, [new URL("../dist/index.js", import.meta.url).pathname],
+                    { stdio: ["pipe", "pipe", "ignore"] });
+    const timer = setTimeout(() => { p.kill(); reject(new Error("timed out")); }, 15000);
+    let buf = "";
+    p.stdout.on("data", d => {
+      buf += d;
+      const i = buf.indexOf("\n");
+      if (i < 0) return;
+      try {
+        const msg = JSON.parse(buf.slice(0, i));
+        clearTimeout(timer); p.kill();
+        resolve(msg.result?.serverInfo?.version);
+      } catch (e) { clearTimeout(timer); p.kill(); reject(e); }
+    });
+    p.stdin.write(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize",
+      params: { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "t", version: "1" } } }) + "\n");
+  });
+  assert.equal(reported, pkg.version);
+});

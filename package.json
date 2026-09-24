@@ -1,6 +1,6 @@
 {
   "name": "evm-recon-mcp",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "MCP server for EVM contract reconnaissance: fetch bytecode, disassemble, detect invalid jump targets, read storage, derive Solidity storage slots, and decode calldata \u2014 across any EVM chain, no API key required.",
   "license": "MIT",
   "type": "module",
