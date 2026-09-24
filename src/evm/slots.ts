@@ -2,15 +2,26 @@
 import sha3 from "js-sha3";
 const { keccak_256 } = sha3;
 
+const HEX = /^[0-9a-fA-F]*$/;
+
 export function pad32(v: string | number | bigint): string {
   let hex: string;
-  if (typeof v === "string" && (v.startsWith("0x") || v.startsWith("0X"))) hex = v.slice(2);
-  else hex = BigInt(v).toString(16);
+  if (typeof v === "string" && (v.startsWith("0x") || v.startsWith("0X"))) {
+    hex = v.slice(2);
+    // Without this check, parseInt() below yields NaN, NaN coerces to 0 inside a
+    // Uint8Array, and the caller receives a confident but completely wrong slot.
+    if (!HEX.test(hex)) throw new Error(`Not a hex value: ${v}`);
+  } else {
+    try { hex = BigInt(v).toString(16); }
+    catch { throw new Error(`Not a valid number or hex value: ${String(v)}`); }
+  }
   if (hex.length > 64) throw new Error(`Value does not fit in 32 bytes: 0x${hex}`);
   return hex.padStart(64, "0");
 }
 
 export function keccakHex(hexNo0x: string): string {
+  if (!HEX.test(hexNo0x)) throw new Error(`Not a hex string: ${hexNo0x}`);
+  if (hexNo0x.length % 2) throw new Error("Hex string has odd length");
   const bytes = new Uint8Array(hexNo0x.length / 2);
   for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(hexNo0x.substr(i * 2, 2), 16);
   return "0x" + keccak_256(bytes);
@@ -50,7 +61,6 @@ export function keccakUtf8(s: string): string {
 }
 
 export function keccakRawHex(hex: string): string {
-  let h = hex.startsWith("0x") || hex.startsWith("0X") ? hex.slice(2) : hex;
-  if (h.length % 2) throw new Error("Hex string has odd length");
+  const h = hex.startsWith("0x") || hex.startsWith("0X") ? hex.slice(2) : hex;
   return keccakHex(h);
 }

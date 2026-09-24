@@ -26,7 +26,14 @@ function opName(b: number): string {
   return `UNKNOWN_0x${b.toString(16).padStart(2, "0")}`;
 }
 
-export interface Instr { pc: number; op: string; opcode: number; push?: string; note?: string; }
+export interface Instr {
+  pc: number; op: string; opcode: number;
+  /** Rendered immediate, for PUSH1..PUSH32 only. */
+  push?: string;
+  /** Pushed value for ANY push, including PUSH0. Used by static jump analysis. */
+  value?: bigint;
+  note?: string;
+}
 export interface Disassembly {
   size: number;
   instructions: Instr[];
@@ -46,7 +53,8 @@ export function hexToBytes(hex: string): Uint8Array {
   return out;
 }
 
-export function disassemble(code: Uint8Array, maxInstructions = 20000): Disassembly {
+/** EVM max contract size is 24576 bytes, so the cap sits above the worst case. */
+export function disassemble(code: Uint8Array, maxInstructions = 30000): Disassembly {
   const instructions: Instr[] = [];
   const jumpdests: number[] = [];
   // Pass 1: decode. PUSH immediates are skipped, so a 0x5b inside push data is
@@ -58,11 +66,14 @@ export function disassemble(code: Uint8Array, maxInstructions = 20000): Disassem
     const op = opName(b);
     const instr: Instr = { pc, op, opcode: b };
     if (b === 0x5b) jumpdests.push(pc);
+    if (b === 0x5f) instr.value = 0n;   // PUSH0 pushes zero; it is still a static jump source
     if (b >= 0x60 && b <= 0x7f) {
       const n = b - 0x5f;
       const data = code.slice(pc + 1, pc + 1 + n);
       if (data.length < n) { instr.note = "truncated push data (end of code)"; truncated = true; }
-      instr.push = "0x" + Array.from(data).map(x => x.toString(16).padStart(2, "0")).join("");
+      const hex = Array.from(data).map(x => x.toString(16).padStart(2, "0")).join("");
+      instr.push = "0x" + hex;
+      instr.value = hex.length ? BigInt("0x" + hex) : 0n;
       instructions.push(instr);
       pc += 1 + n;
       continue;
@@ -76,9 +87,9 @@ export function disassemble(code: Uint8Array, maxInstructions = 20000): Disassem
   const invalidJumps: Disassembly["invalidJumps"] = [];
   for (let i = 0; i < instructions.length - 1; i++) {
     const a = instructions[i], b2 = instructions[i + 1];
-    if (a.push === undefined) continue;
+    if (a.value === undefined) continue;
     if (b2.op !== "JUMP" && b2.op !== "JUMPI") continue;
-    const target = BigInt(a.push === "0x" ? "0x0" : a.push);
+    const target = a.value;
     if (target > BigInt(code.length)) {
       invalidJumps.push({ pc: b2.pc, kind: b2.op, target: "0x" + target.toString(16),
         reason: `target beyond end of code (code size ${code.length})` });

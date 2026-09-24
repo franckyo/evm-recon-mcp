@@ -6,7 +6,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { CHAINS, chainList, resolveEndpoints, rpcCall, normalizeAddress, toHexQuantity } from "./evm/rpc.js";
+import { CHAINS, chainList, resolveEndpoints, rpcCall, normalizeAddress, toHexQuantity, RpcExecutionError } from "./evm/rpc.js";
 import { hexToBytes, disassemble, formatDisassembly } from "./evm/disasm.js";
 import { mappingSlot, nestedMappingSlot, arrayElementSlot, keccakWords, keccakUtf8, keccakRawHex } from "./evm/slots.js";
 import { decodeCalldata, selectorOf } from "./evm/selectors.js";
@@ -170,7 +170,8 @@ server.registerTool("function_selector", {
 server.registerTool("eth_call", {
   title: "Simulate a read-only call",
   description:
-    "Simulate a call with eth_call and report whether it returned or reverted. Nothing is broadcast and no key is used. " +
+    "Simulate a call with eth_call and report whether it returned, reverted, or could not be reached. " +
+    "A network failure is reported distinctly from a revert, so an unreachable node is never mistaken for a contract rejecting the call. Nothing is broadcast and no key is used. " +
     "Useful for probing which calldata and value combinations a contract accepts.",
   inputSchema: {
     to: z.string(), data: z.string().default("0x").describe("Calldata hex."),
@@ -188,7 +189,13 @@ server.registerTool("eth_call", {
       const r = await rpcCall(eps, "eth_call", [tx, block ?? "latest"]);
       return text(`SUCCESS — call did not revert.\nreturn data: ${r === "0x" ? "0x (empty)" : r}`);
     } catch (e: any) {
-      return text(`REVERTED (or rejected by the node).\n${e?.message ?? String(e)}`);
+      if (e instanceof RpcExecutionError) {
+        return text(`REVERTED — the node executed the call and it failed.\n${e.message}` +
+                    (e.data ? `\nrevert data: ${JSON.stringify(e.data)}` : ""));
+      }
+      // Not a verdict about the contract: we never got an answer.
+      return text(`NO RESULT — could not reach any RPC endpoint, so this says nothing about ` +
+                  `whether the call would revert. Retry, or pass rpc_url.\n${e?.message ?? String(e)}`);
     }
   } catch (e) { return fail(e); }
 });

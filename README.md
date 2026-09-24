@@ -1,5 +1,9 @@
 # evm-recon-mcp
 
+[![npm](https://img.shields.io/npm/v/evm-recon-mcp)](https://www.npmjs.com/package/evm-recon-mcp)
+[![CI](https://github.com/franckyo/evm-recon-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/franckyo/evm-recon-mcp/actions/workflows/ci.yml)
+[![license](https://img.shields.io/npm/l/evm-recon-mcp)](./LICENSE)
+
 **Give your AI assistant the ability to read deployed smart contracts.**
 
 An [MCP](https://modelcontextprotocol.io) server for EVM contract reconnaissance: fetch bytecode, disassemble it, detect invalid jump targets, read storage slots, derive Solidity storage layouts, and decode calldata — on any EVM chain, **with no API key**.

@@ -28,6 +28,27 @@ export function resolveEndpoints(chain: string, rpcUrl?: string): string[] {
   return c.rpc;
 }
 
+/** The node executed the request and rejected it (e.g. an EVM revert). Not a transport problem. */
+export class RpcExecutionError extends Error {
+  constructor(message: string, readonly code?: number, readonly data?: unknown) {
+    super(message); this.name = "RpcExecutionError";
+  }
+}
+/** Every endpoint failed to produce an answer: DNS, timeout, HTTP error, rate limit. */
+export class RpcTransportError extends Error {
+  constructor(message: string) { super(message); this.name = "RpcTransportError"; }
+}
+
+/** True when the node is reporting the outcome of execution rather than an infrastructure fault. */
+function isExecutionError(code: unknown, message: string): boolean {
+  if (code === 3) return true;                    // standard JSON-RPC "execution reverted"
+  // Geth-family nodes report EVM failures as -32000 with a descriptive message, so the
+  // message is the only reliable signal. Matching too narrowly turns a real verdict about
+  // the contract into a misleading "could not reach the network".
+  return /revert|execution|out of gas|gas required|invalid opcode|invalid jump|bad jump|stack (under|over)flow|insufficient funds|max (code|init ?code) size|contract creation code/i
+    .test(message);
+}
+
 /** Calls each endpoint in turn; returns the first success. Errors aggregate so failures are debuggable. */
 export async function rpcCall(endpoints: string[], method: string, params: unknown[], timeoutMs = 20000): Promise<any> {
   const errors: string[] = [];
@@ -43,13 +64,22 @@ export async function rpcCall(endpoints: string[], method: string, params: unkno
       });
       if (!res.ok) { errors.push(`${url}: HTTP ${res.status}`); continue; }
       const json: any = await res.json();
-      if (json.error) { errors.push(`${url}: ${json.error.message ?? JSON.stringify(json.error)}`); continue; }
+      if (json.error) {
+        const msg = json.error.message ?? JSON.stringify(json.error);
+        // An execution verdict is the node's answer, identical on every endpoint, so
+        // failing over would only turn a real result into a misleading transport error.
+        if (isExecutionError(json.error.code, String(msg))) {
+          throw new RpcExecutionError(String(msg), json.error.code, json.error.data);
+        }
+        errors.push(`${url}: ${msg}`); continue;
+      }
       return json.result;
     } catch (e: any) {
+      if (e instanceof RpcExecutionError) throw e;
       errors.push(`${url}: ${e?.message ?? String(e)}`);
     } finally { clearTimeout(timer); }
   }
-  throw new Error(`All RPC endpoints failed for ${method}.\n${errors.join("\n")}`);
+  throw new RpcTransportError(`All RPC endpoints failed for ${method}.\n${errors.join("\n")}`);
 }
 
 export function normalizeAddress(addr: string): string {
