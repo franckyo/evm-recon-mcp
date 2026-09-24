@@ -1,5 +1,8 @@
 # evm-recon-mcp v0.1.0 — post-ship code review
 
+**STATUS: all findings fixed. Findings 1–7 in v0.1.1, finding 8 in v0.1.2.**
+This document is kept as the record of what was wrong and how it was found.
+
 Reviewed 2026-09-23, after publication. Every finding below was **reproduced by running the
 shipped code**, not inferred by reading it. Commands to reproduce are included.
 
@@ -105,6 +108,27 @@ to the invalid-jump verdict rather than a separate flag.
 `import("evm-recon-mcp")` starts a stdio server and hangs rather than exposing an API.
 
 Fix: drop `main`, or split a library entry from the CLI entry.
+
+## HIGH — 8. The server announced the wrong version over MCP *(found after v0.1.1 shipped)*
+
+`src/index.ts`
+
+The version passed to `new McpServer({...})` was a hardcoded `"0.1.0"` string, never bumped
+with `package.json`. **v0.1.1 published as 0.1.1 and introduced itself to every client as
+0.1.0.**
+
+The instructive part is how it was found. The full 14-test suite passed. CI was green on Node
+18, 20 and 22. The package installed cleanly. None of that could catch it, because every test
+ran against the local build and asserted behaviour, not identity. It surfaced only when the
+published artifact was driven through the real MCP interface and the very first line of the
+handshake was the server naming the wrong version.
+
+This is the oracle-discipline rule in miniature: **verify the real artifact through the real
+interface, not the thing you just built.** A green suite is not evidence that the thing you
+shipped is the thing you tested.
+
+Fixed in v0.1.2 by reading the version from `package.json` at startup so the two cannot
+diverge, plus a test that spawns the built server and asserts the reported version.
 
 ## LOW — 7. Missing release hygiene
 
