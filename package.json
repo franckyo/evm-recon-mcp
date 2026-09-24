@@ -1,0 +1,26 @@
+{
+  "name": "evm-recon-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for EVM contract reconnaissance: fetch bytecode, disassemble, detect invalid jump targets, read storage, derive Solidity storage slots, and decode calldata — across any EVM chain, no API key required.",
+  "license": "MIT",
+  "type": "module",
+  "bin": { "evm-recon-mcp": "dist/index.js" },
+  "main": "dist/index.js",
+  "files": ["dist", "README.md", "LICENSE"],
+  "engines": { "node": ">=18" },
+  "keywords": ["mcp","model-context-protocol","evm","ethereum","solidity","security","audit","bytecode","disassembler","reverse-engineering","smart-contract"],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "js-sha3": "^0.9.3",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "@types/node": "^22.0.0"
+  }
+}
