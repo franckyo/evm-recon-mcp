@@ -1,7 +1,7 @@
 {
   "name": "evm-recon-mcp",
-  "version": "0.1.2",
-  "description": "MCP server for EVM contract reconnaissance: fetch bytecode, disassemble, detect invalid jump targets, read storage, derive Solidity storage slots, and decode calldata \u2014 across any EVM chain, no API key required.",
+  "version": "0.1.3",
+  "description": "MCP server for EVM contract reconnaissance: fetch bytecode, disassemble, detect invalid jump targets, read storage, derive Solidity storage slots, and decode calldata — across any EVM chain, no API key required.",
   "license": "MIT",
   "type": "module",
   "bin": {
@@ -37,13 +37,13 @@
     "pretest": "npm run build"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "js-sha3": "^0.9.3",
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "typescript": "^5.6.0",
-    "@types/node": "^22.0.0"
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
   },
   "repository": {
     "type": "git",
@@ -53,5 +53,5 @@
   "bugs": {
     "url": "https://github.com/franckyo/evm-recon-mcp/issues"
   },
-  "author": "Franckelson Duvelson <franckelsond@gmail.com>"
+  "author": "Franckelson Duvelson <hello@oarkit.com>"
 }
