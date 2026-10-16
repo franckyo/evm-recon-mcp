@@ -130,3 +130,7 @@ Public RPC endpoints see the addresses you query and your IP. For sensitive work
 ## License
 
 MIT
+
+---
+
+Built by [Oarkit](https://oarkit.com/): small software, Google Sheets add-ons and MCP servers for small teams. Need an MCP server built, fixed or upgraded? [oarkit.com](https://oarkit.com/#services) · hello@oarkit.com
